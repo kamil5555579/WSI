@@ -6,10 +6,10 @@ from solver_evo import EvolutionaryAlgorithm
 import abc
 
 class MLP:
-    def __init__(self, layers):
+    def __init__(self, layers: list[Layer]) -> None:
         self.layers = layers
     
-    def forward(self, X):
+    def forward(self, X: np.ndarray) -> np.ndarray:
         for layer in self.layers:
             X = layer.forward(X)
         return X
@@ -19,15 +19,15 @@ class MLP:
         pass
 
 class gdMLP(MLP):
-    def __init__(self, layers, learning_rate=0.0001):
+    def __init__(self, layers: list[Layer], learning_rate: float = 0.001) -> None:
         super().__init__(layers)
         self.learning_rate = learning_rate
 
-    def backward(self, d_output):
+    def backward(self, d_output: np.ndarray) -> None:
         for layer in reversed(self.layers):
             d_output = layer.backward(d_output, self.learning_rate)
 
-    def train(self, X, y, epochs=1000):
+    def train(self, X: np.ndarray, y: np.ndarray, epochs: int = 1000) -> None:
         for epoch in range(epochs):
             # Przesyłanie sygnału do przodu
             output = self.forward(X)
@@ -44,24 +44,24 @@ class gdMLP(MLP):
                 print(f"Epoka {epoch} - Błąd MSE: {mse}")
 
 class evolutionaryMLP(MLP):
-    def __init__(self, layers, population_size=10, generations=100, sigma=0.1):
+    def __init__(self, layers: list[Layer], population_size: int = 10, generations: int = 100, sigma: float = 0.1) -> None:
         super().__init__(layers)
         self.population_size = population_size
         self.generations = generations
         self.sigma = sigma
 
-    def train(self, X, y):
+    def train(self, X: np.ndarray, y: np.ndarray) -> None:
         parameters = self.layers_to_parameters()
         P0 = np.random.uniform(-1, 1, size=(self.population_size, parameters.size))
         f = lambda x: self.func_to_optimize(x, X, y)
-        solver = EvolutionaryAlgorithm(f, P0, self.population_size, self.sigma)
+        solver = EvolutionaryAlgorithm(f, P0, self.population_size, self.sigma, self.generations)
         x_t, f_t = solver.solve()
         best = x_t[-1]
         print(f_t)
         print(best)
         self.layers = self.parameters_to_layers(best)
 
-    def func_to_optimize(self, parameters_population, X, y):
+    def func_to_optimize(self, parameters_population: np.ndarray, X: np.ndarray, y: np.ndarray) -> np.ndarray:
         loss = []
         for parameters in parameters_population:
             self.layers = self.parameters_to_layers(parameters)
@@ -69,12 +69,12 @@ class evolutionaryMLP(MLP):
             loss.append(np.mean((y - output) ** 2))
         return np.array(loss)
         
-    def layers_to_parameters(self):
+    def layers_to_parameters(self) -> np.ndarray:
         weights = [layer.weights for layer in self.layers]
         biases = [layer.bias for layer in self.layers]
         return np.concatenate([w.ravel() for w in weights] + [b for b in biases])
     
-    def parameters_to_layers(self, parameters):
+    def parameters_to_layers(self, parameters: np.ndarray) -> list[Layer]:
         weights = []
         biases = []
         start = 0
@@ -94,13 +94,13 @@ class evolutionaryMLP(MLP):
 if __name__ == "__main__":
     
     layers = [
-        Layer(1, 20, activation=tanh),
+        Layer(1, 50, activation=tanh),
         # Layer(20, 20, activation=lelu),
-        Layer(20, 1, activation=linear),
+        Layer(50, 1, activation=linear),
     ]
 
     # mlp = evolutionaryMLP(layers, population_size=10, generations=100, sigma=0.1)
-    mlp = gdMLP(layers, learning_rate=0.005)
+    mlp = gdMLP(layers, learning_rate=0.001)
 
     # Generowanie danych dla funkcji do aproksymacji (np. sinus)
     X = np.linspace(0, 2 * np.pi, 100).reshape(-1, 1)  # Dane wejściowe
