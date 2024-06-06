@@ -1,6 +1,5 @@
 import numpy as np
-
-
+from matplotlib import animation
 class QLearning:
     def __init__(
         self,
@@ -78,16 +77,18 @@ class QLearning:
         """
         return np.argmax(self.Q, axis=1)
 
-    def play(self, env: "gym.Env") -> None:
+    def record(self, env: "gym.Env") -> None:
         """
-        Play the game using the greedy policy
+        Record the game using the greedy policy
         """
+        frames = []
         state, _ = env.reset()
         done = False
         while not done:
             action = self.get_policy()[state]
             state, _, done, *_ = env.step(action)
-            env.render()
+            frames.append(env.render())
+        save_frames_as_gif(frames)
 
     def evaluate(
         self, env: "gym.Env", n_episodes: int = 100, max_steps: int = 1000
@@ -109,6 +110,19 @@ class QLearning:
             total_rewards.append(total_reward)
         return np.mean(total_rewards), np.std(total_rewards), np.min(total_rewards), np.max(total_rewards)
 
+def save_frames_as_gif(frames, path='./', filename='gym_animation.gif'):
+
+    #Mess with this to change frame size
+    plt.figure(figsize=(frames[0].shape[1] / 72.0, frames[0].shape[0] / 72.0), dpi=72)
+
+    patch = plt.imshow(frames[0])
+    plt.axis('off')
+
+    def animate(i):
+        patch.set_data(frames[i])
+
+    anim = animation.FuncAnimation(plt.gcf(), animate, frames = len(frames), interval=300)
+    anim.save(path + filename, writer='imagemagick')
 
 # Test
 if __name__ == "__main__":
@@ -136,7 +150,8 @@ if __name__ == "__main__":
 
     env.close()
 
-    env = gym.make("Taxi-v3", render_mode="human")
-    qlearning.play(env)
+    env = gym.make("Taxi-v3", render_mode="rgb_array")
+
+    qlearning.record(env)
 
     env.close()
